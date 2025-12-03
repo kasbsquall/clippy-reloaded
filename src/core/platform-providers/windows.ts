@@ -14,17 +14,20 @@ import { PlatformProvider, WindowInfo, PlatformCapabilities } from './types';
 const execAsync = promisify(exec);
 
 // PowerShell script to get the foreground window title and process name
+// Uses UTF-8 encoding to handle special characters (tildes, emojis, etc.)
 const POWERSHELL_SCRIPT = `
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
 public class WindowHelper {
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetForegroundWindow();
     
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
     
     [DllImport("user32.dll")]
@@ -33,8 +36,8 @@ public class WindowHelper {
 "@
 
 $hwnd = [WindowHelper]::GetForegroundWindow()
-$title = New-Object System.Text.StringBuilder 256
-[WindowHelper]::GetWindowText($hwnd, $title, 256) | Out-Null
+$title = New-Object System.Text.StringBuilder 512
+[WindowHelper]::GetWindowText($hwnd, $title, 512) | Out-Null
 
 $processId = 0
 [WindowHelper]::GetWindowThreadProcessId($hwnd, [ref]$processId) | Out-Null
@@ -81,12 +84,11 @@ export class WindowsPowerShellProvider implements PlatformProvider {
   }
 
   /**
-   * Ensure the PowerShell script file exists
+   * Ensure the PowerShell script file exists (always overwrite to get latest version)
    */
   private ensureScriptFile(): void {
-    if (!existsSync(SCRIPT_PATH)) {
-      writeFileSync(SCRIPT_PATH, POWERSHELL_SCRIPT, 'utf8');
-    }
+    // Always write to ensure we have the latest script with UTF-8 support
+    writeFileSync(SCRIPT_PATH, POWERSHELL_SCRIPT, 'utf8');
   }
 
   /**
@@ -101,12 +103,18 @@ export class WindowsPowerShellProvider implements PlatformProvider {
       // Ensure script file exists
       this.ensureScriptFile();
 
-      const { stdout } = await execAsync(
+      const { stdout, stderr } = await execAsync(
         `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${SCRIPT_PATH}"`,
-        { timeout: this.timeout }
+        { timeout: this.timeout, encoding: 'utf8' }
       );
 
+      if (stderr) {
+        console.error('[WindowsPowerShellProvider] PowerShell stderr:', stderr);
+      }
+
       const output = stdout.trim();
+      console.log('[WindowsPowerShellProvider] Raw output:', output);
+      
       if (!output) {
         return null;
       }

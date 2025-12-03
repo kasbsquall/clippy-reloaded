@@ -343,7 +343,21 @@
     helpBtn.onclick = async () => {
       playSound('click');
       
-      if (!currentContext) {
+      // Always fetch fresh context from main process
+      let contextToUse = currentContext;
+      if (window.clippy?.getBrowserContext) {
+        try {
+          const freshContext = await window.clippy.getBrowserContext();
+          if (freshContext && freshContext.pageTitle) {
+            contextToUse = freshContext;
+            currentContext = freshContext; // Update local cache
+          }
+        } catch (e) {
+          console.log('[Help] Could not fetch fresh context:', e);
+        }
+      }
+      
+      if (!contextToUse) {
         showMessage("I can see you're working, but I'm not sure on what. What do you need help with? 📎", false);
         chatInput.focus();
         return;
@@ -351,17 +365,17 @@
       
       isUserInteracting = true;
       awaitingHelpResponse = true;
-      helpContext = { ...currentContext };
+      helpContext = { ...contextToUse };
       
       // Add context separator when user clicks help
-      const browserIcon = { chrome: '🌐', firefox: '🦊', edge: '🔷', unknown: '🖥️' }[currentContext.browserType] || '🖥️';
+      const browserIcon = { chrome: '🌐', firefox: '🦊', edge: '🔷', unknown: '🖥️' }[contextToUse.browserType] || '🖥️';
       chatHistory.push({ 
         role: 'separator', 
-        text: `── ${browserIcon} ${currentContext.pageTitle.substring(0, 30)}${currentContext.pageTitle.length > 30 ? '...' : ''} ──`
+        text: `── ${browserIcon} ${contextToUse.pageTitle.substring(0, 30)}${contextToUse.pageTitle.length > 30 ? '...' : ''} ──`
       });
       
       // Ask what they're trying to do
-      const shortTitle = currentContext.pageTitle.substring(0, 35) + (currentContext.pageTitle.length > 35 ? '...' : '');
+      const shortTitle = contextToUse.pageTitle.substring(0, 35) + (contextToUse.pageTitle.length > 35 ? '...' : '');
       showMessage(`I see you're on "${shortTitle}". What are you trying to do? 📎`, false);
       playSound('ding');
       setAnimation('peek');
