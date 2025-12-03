@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Clippy Reloaded</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      width: 320px; height: 460px; 
+      background: transparent; 
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      -webkit-app-region: drag;
+    }
+    .no-drag { -webkit-app-region: no-drag; }
+    
+    #root { 
+      width: 100%; height: 100%; 
+      display: flex; flex-direction: column;
+      align-items: center; padding: 8px;
+      animation: slideIn 0.5s ease-out;
+    }
+    
+    @keyframes slideIn {
+      0% { transform: translateX(100%); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    
+    .header {
+      width: 100%; height: 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px; margin-bottom: 6px; color: white;
+    }
+    .header-title { font-weight: bold; font-size: 12px; }
+    .ai-badge { background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 8px; font-size: 9px; }
+    .ai-badge.online { background: #10a37f; }
+    
+    .context-banner {
+      width: 100%; padding: 5px 8px;
+      background: #f0f7ff; border: 1px solid #4a90d9;
+      border-radius: 6px; margin-bottom: 6px;
+      font-size: 10px; color: #1a5490;
+      display: flex; justify-content: space-between; align-items: center;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .context-banner.visible { opacity: 1; }
+    
+    .help-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; border: none; border-radius: 12px;
+      padding: 4px 10px; font-size: 9px; cursor: pointer;
+      font-weight: bold; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .help-btn:hover { transform: scale(1.05); box-shadow: 0 2px 8px rgba(102,126,234,0.4); }
+    .help-btn:active { transform: scale(0.95); }
+    
+    .main-content {
+      flex: 1; width: 100%; 
+      display: flex; flex-direction: column;
+    }
+    
+    .chat-area { 
+      flex: 1; width: 100%; 
+      display: flex; flex-direction: column;
+    }
+    
+    .speech-bubble {
+      background: #fffef0; border: 2px solid #444;
+      border-radius: 10px; padding: 10px;
+      margin-bottom: 6px; width: 100%;
+      height: 155px;
+      overflow-y: auto; box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+      font-size: 12px; line-height: 1.4; color: #333;
+    }
+    
+    .input-area { width: 100%; margin-bottom: 4px; }
+    .chat-input {
+      width: 100%; padding: 8px 12px;
+      border: 2px solid #ddd; border-radius: 16px;
+      font-size: 11px; background: white;
+    }
+    .chat-input:focus { outline: none; border-color: #667eea; }
+    
+    .clippy-area { 
+      display: flex; flex-direction: column; align-items: center; 
+      cursor: move; margin-top: -15px;
+      overflow: visible;
+      padding-bottom: 20px;
+    }
+    .clippy-character {
+      font-size: 130px; 
+      cursor: move; user-select: none;
+      transition: transform 0.3s;
+      line-height: 1;
+      margin-top: -30px;
+    }
+    .clippy-character:active { cursor: grabbing; }
+    
+    .clippy-character.idle { animation: idle 3s ease-in-out infinite; }
+    .clippy-character.thinking { animation: thinking 0.5s ease infinite; }
+    .clippy-character.wave { animation: wave 1s ease; }
+    .clippy-character.bounce { animation: bounce 0.6s ease; }
+    .clippy-character.excited { animation: excited 0.5s ease; }
+    .clippy-character.apologetic { animation: apologetic 0.8s ease; }
+    .clippy-character.dance { animation: dance 1s ease; }
+    .clippy-character.spin { animation: spin 0.8s ease; }
+    .clippy-character.peek { animation: peek 1.5s ease; }
+    
+    @keyframes idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes thinking { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+    @keyframes wave { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(15deg); } 75% { transform: rotate(-15deg); } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    @keyframes excited { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+    @keyframes apologetic { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(-5deg); } }
+    @keyframes dance { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-5px) rotate(-10deg); } 75% { transform: translateX(5px) rotate(10deg); } }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes peek { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-10px) scale(1.1); } }
+    
+    .hint { font-size: 8px; color: #aaa; margin-top: 0; }
+    
+    .context-menu {
+      position: fixed; background: white;
+      border: 1px solid #ddd; border-radius: 6px;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.15);
+      padding: 4px 0; display: none; z-index: 1000;
+    }
+    .context-menu.visible { display: block; }
+    .context-menu-item { padding: 6px 14px; cursor: pointer; font-size: 11px; }
+    .context-menu-item:hover { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="header">
+      <span class="header-title">Clippy Reloaded</span>
+      <span class="ai-badge" id="aiBadge">AI</span>
+    </div>
+    
+    <div class="context-banner visible" id="contextBanner">
+      <span id="contextText">Ready to help...</span>
+      <button class="help-btn no-drag" id="helpBtn">Help me!</button>
+    </div>
+    
+    <div class="main-content">
+      <div class="chat-area no-drag">
+        <div class="speech-bubble" id="bubble">Loading...</div>
+        
+        <div class="input-area">
+          <input type="text" class="chat-input no-drag" id="chatInput" placeholder="Ask me anything...">
+        </div>
+      </div>
+      
+      <div class="clippy-area">
+        <div class="clippy-character idle" id="clippyChar">📎</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" id="menuClear">🗑️ Clear chat</div>
+    <div class="context-menu-item" id="menuSound">🔊 Sound: ON</div>
+    <div class="context-menu-item" id="menuMinimize">➖ Minimize</div>
+  </div>
+  
+  <script>
+    const bubble = document.getElementById('bubble');
+    const clippyEl = document.getElementById('clippyChar');
+    const chatInput = document.getElementById('chatInput');
+    const aiBadge = document.getElementById('aiBadge');
+    const contextMenu = document.getElementById('contextMenu');
+    const contextBanner = document.getElementById('contextBanner');
+    const contextText = document.getElementById('contextText');
+    const helpBtn = document.getElementById('helpBtn');
+    
+    const funAnimations = ['wave', 'bounce', 'excited', 'dance', 'spin', 'peek'];
+    let currentAnim = 'idle';
+    let currentContext = null;
+    let chatHistory = [];
+    let idleMessageInterval = null;
+    
+    // Sound effects using Web Audio API
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let soundEnabled = true;
+    
+    function playSound(type) {
+      if (!soundEnabled) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        switch(type) {
+          case 'pop': // Clippy appears / startup
+            osc.frequency.value = 600;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            break;
+          case 'ding': // AI responds
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            break;
+          case 'click': // Button click
+            osc.frequency.value = 400;
+            osc.type = 'square';
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            break;
+          case 'whoosh': // Context change
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            break;
+          case 'send': // User sends message
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(660, audioCtx.currentTime + 0.08);
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            break;
+          case 'thinking': // AI is thinking
+            osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(250, audioCtx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(200, audioCtx.currentTime + 0.2);
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            break;
+          case 'error': // Error occurred
+            osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+            osc.type = 'sawtooth';
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            break;
+          case 'idle': // Idle message appears
+            osc.frequency.value = 523; // C5
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.12);
+            break;
+          case 'clear': // Chat cleared
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            break;
+          case 'clippy': // Click on Clippy
+            // Two-tone chirp
+            osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(700, audioCtx.currentTime + 0.06);
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.07, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.12);
+            break;
+        }
+      } catch(e) { /* Audio not supported */ }
+    }
+    let isUserInteracting = false;
+    
+    // Fun idle messages - facts, jokes, tips
+    const idleMessages = [
+      { text: "Did you know? The first computer bug was an actual bug - a moth found in Harvard's Mark II in 1947! 🦋", anim: "peek" },
+      { text: "Fun fact: The average person spends 6 months of their lifetime waiting for red lights. I spend mine waiting for you! 📎", anim: "bounce" },
+      { text: "Pro tip: Ctrl+Shift+T reopens your last closed tab. You're welcome! ⌨️", anim: "excited" },
+      { text: "Random thought: If you put your finger in your ear and scratch, it sounds like Pac-Man. Try it! 🎮", anim: "dance" },
+      { text: "Did you know? Honey never spoils. Archaeologists found 3000-year-old honey in Egyptian tombs! 🍯", anim: "spin" },
+      { text: "Tip: Press Win+V to access clipboard history on Windows. Game changer! 📋", anim: "wave" },
+      { text: "Fun fact: The inventor of the Pringles can is buried in one. Commitment! 🥔", anim: "peek" },
+      { text: "Pro tip: Ctrl+L selects the URL bar instantly. Speed browsing! 🚀", anim: "excited" },
+      { text: "Random: A group of flamingos is called a 'flamboyance'. Fabulous! 🦩", anim: "dance" },
+      { text: "Did you know? The first webcam was used to monitor a coffee pot at Cambridge. Priorities! ☕", anim: "bounce" },
+      { text: "Tip: Double-click a word to select it, triple-click for the whole paragraph! 📝", anim: "wave" },
+      { text: "Fun fact: Octopuses have three hearts. I have zero, but I still care about you! 💙", anim: "spin" },
+      { text: "I'm just hanging out here... watching... waiting... not creepy at all! 👀📎", anim: "peek" },
+      { text: "If I had legs, I'd be doing a little dance right now. Instead, I'll just... wiggle. 📎", anim: "dance" },
+      { text: "You know what's cool? You. Working hard over there. Keep it up! 💪", anim: "excited" },
+    ];
+    
+    function setAnimation(anim) {
+      clippyEl.className = 'clippy-character ' + anim;
+      currentAnim = anim;
+      if (anim !== 'idle' && anim !== 'thinking') {
+        setTimeout(() => { clippyEl.className = 'clippy-character idle'; currentAnim = 'idle'; }, 1200);
+      }
+    }
+    
+    function showMessage(text, isUser = false) {
+      isUserInteracting = true;
+      
+      if (isUser) {
+        chatHistory.push({ role: 'user', text });
+      } else {
+        chatHistory.push({ role: 'assistant', text });
+      }
+      
+      renderChat();
+      
+      // Reset idle timer after interaction
+      setTimeout(() => { isUserInteracting = false; }, 30000);
+    }
+    
+    function showIdleMessage() {
+      if (isUserInteracting) return;
+      
+      const msg = idleMessages[Math.floor(Math.random() * idleMessages.length)];
+      bubble.innerHTML = msg.text;
+      setAnimation(msg.anim);
+      // No sound for idle messages - too annoying
+    }
+    
+    function showThinking() {
+      bubble.innerHTML += '<div style="color:#888;">Thinking... 🤔</div>';
+      bubble.scrollTop = bubble.scrollHeight;
+      setAnimation('thinking');
+      playSound('thinking');
+    }
+    
+
+    
+    // Help button - asks AI for contextual help
+    let awaitingHelpResponse = false;
+    let helpContext = null;
+    
+    helpBtn.onclick = async () => {
+      playSound('click');
+      
+      if (!currentContext) {
+        showMessage("I can see you're working, but I'm not sure on what. What do you need help with? 📎", false);
+        chatInput.focus();
+        return;
+      }
+      
+      isUserInteracting = true;
+      awaitingHelpResponse = true;
+      helpContext = { ...currentContext };
+      
+      // Add context separator when user clicks help
+      const browserIcon = { chrome: '🌐', firefox: '🦊', edge: '🔷', unknown: '🖥️' }[currentContext.browserType] || '🖥️';
+      chatHistory.push({ 
+        role: 'separator', 
+        text: `── ${browserIcon} ${currentContext.pageTitle.substring(0, 30)}${currentContext.pageTitle.length > 30 ? '...' : ''} ──`
+      });
+      
+      // Ask what they're trying to do
+      const shortTitle = currentContext.pageTitle.substring(0, 35) + (currentContext.pageTitle.length > 35 ? '...' : '');
+      showMessage(`I see you're on "${shortTitle}". What are you trying to do? 📎`, false);
+      playSound('ding');
+      setAnimation('peek');
+      chatInput.placeholder = "Tell me what you're working on...";
+      chatInput.focus();
+    };
+    
+    // Enhanced send message that handles help context
+    async function sendMessageWithContext(msg) {
+      playSound('send');
+      showMessage(msg, true);
+      
+      // If we're in help mode, combine context with user's question
+      if (awaitingHelpResponse && helpContext) {
+        awaitingHelpResponse = false;
+        chatInput.placeholder = "Ask me anything...";
+        
+        showThinking();
+        
+        try {
+          if (window.clippy && window.clippy.chat) {
+            const prompt = `The user is viewing: "${helpContext.pageTitle}" (${helpContext.applicationName}).
+They said: "${msg}"
+
+Give them specific, actionable help based on what they're viewing AND what they asked. 
+Be concise (2-3 sentences max). If they're stuck on something technical, give a direct answer or next step.
+End with 📎`;
+            
+            const response = await window.clippy.chat(prompt);
+            showMessage(response, false);
+            playSound('ding');
+            setAnimation('excited');
+          }
+        } catch (err) {
+          showMessage("Hmm, let me try again. Can you rephrase that? 📎", false);
+          playSound('error');
+          setAnimation('apologetic');
+        }
+        
+        helpContext = null;
+      } else {
+        // Normal chat flow
+        showThinking();
+        
+        try {
+          if (window.clippy && window.clippy.chat) {
+            // Include current context if available
+            let prompt = msg;
+            if (currentContext) {
+              prompt = `[User is currently viewing: "${currentContext.pageTitle}"]\n\nUser asks: ${msg}`;
+            }
+            
+            const response = await window.clippy.chat(prompt);
+            showMessage(response, false);
+            playSound('ding');
+            setAnimation('excited');
+          } else {
+            showMessage("AI not connected. Check .env file 📎", false);
+            playSound('error');
+          }
+        } catch (err) {
+          showMessage("Error: " + err.message, false);
+          setAnimation('apologetic');
+          playSound('error');
+        }
+      }
+    }
+    
+    // Random animations while idle
+    setInterval(() => {
+      if (currentAnim === 'idle' && !isUserInteracting && Math.random() > 0.6) {
+        setAnimation(funAnimations[Math.floor(Math.random() * funAnimations.length)]);
+      }
+    }, 8000);
+    
+    // Show random idle messages
+    idleMessageInterval = setInterval(() => {
+      if (!isUserInteracting && Math.random() > 0.5) {
+        showIdleMessage();
+      }
+    }, 25000);
+    
+    // Chat input
+    chatInput.onkeypress = async (e) => {
+      if (e.key === 'Enter' && chatInput.value.trim()) {
+        const msg = chatInput.value.trim();
+        chatInput.value = '';
+        await sendMessageWithContext(msg);
+      }
+    };
+    
+    // Click clippy for random animation
+    clippyEl.onclick = () => {
+      playSound('clippy');
+      setAnimation(funAnimations[Math.floor(Math.random() * funAnimations.length)]);
+    };
+    
+    // Context menu
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      contextMenu.style.left = Math.min(e.clientX, 320) + 'px';
+      contextMenu.style.top = Math.min(e.clientY, 400) + 'px';
+      contextMenu.classList.add('visible');
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.context-menu')) {
+        contextMenu.classList.remove('visible');
+      }
+    });
+    
+    document.getElementById('menuClear').onclick = () => {
+      playSound('clear');
+      chatHistory = [];
+      isUserInteracting = false;
+      bubble.innerHTML = 'Chat cleared! What can I help with? 📎';
+      if (window.clippy?.clearHistory) window.clippy.clearHistory();
+    };
+    document.getElementById('menuSound').onclick = () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('menuSound').textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+      if (soundEnabled) playSound('click');
+    };
+    
+    document.getElementById('menuMinimize').onclick = () => {
+      playSound('click');
+      if (window.clippy?.minimize) window.clippy.minimize();
+    };
+    
+    // Listen for messages from main process
+    if (window.clippy?.onMessage) {
+      window.clippy.onMessage((message) => {
+        showMessage(message, false);
+      });
+    }
+    
+    // Listen for animation changes
+    if (window.clippy?.onAnimationChange) {
+      window.clippy.onAnimationChange((animation) => {
+        setAnimation(animation);
+      });
+    }
+    
+    // Listen for context changes - just update the banner, don't add separators automatically
+    if (window.clippy?.onBrowserContextChange) {
+      window.clippy.onBrowserContextChange((context) => {
+        if (context && context.pageTitle) {
+          const browserIcon = { chrome: '🌐', firefox: '🦊', edge: '🔷', unknown: '🖥️' }[context.browserType] || '🖥️';
+          // Only play sound if context actually changed
+          // Context changed - no sound, just update silently
+          currentContext = context;
+          contextText.textContent = `${browserIcon} ${context.pageTitle.substring(0, 28)}${context.pageTitle.length > 28 ? '...' : ''}`;
+        }
+      });
+    }
+    
+    // Render chat with separators
+    function renderChat() {
+      const recentHistory = chatHistory.slice(-6);
+      let html = recentHistory.map(msg => {
+        if (msg.role === 'user') {
+          return `<div style="text-align:right;color:#667eea;margin-bottom:4px;"><b>You:</b> ${msg.text}</div>`;
+        } else if (msg.role === 'separator') {
+          return `<div style="text-align:center;color:#999;font-size:10px;margin:8px 0;border-top:1px dashed #ddd;padding-top:8px;">${msg.text}</div>`;
+        } else {
+          return `<div style="margin-bottom:4px;">${msg.text.replace(/\n/g, '<br>')}</div>`;
+        }
+      }).join('');
+      bubble.innerHTML = html;
+      bubble.scrollTop = bubble.scrollHeight;
+    }
+    
+    // Init
+    setTimeout(async () => {
+      playSound('pop'); // Startup sound!
+      
+      if (window.clippy?.isAIAvailable) {
+        const available = await window.clippy.isAIAvailable();
+        aiBadge.textContent = available ? 'AI ✓' : 'AI ✗';
+        aiBadge.className = available ? 'ai-badge online' : 'ai-badge';
+      }
+      
+      bubble.innerHTML = "Hey there! 👋 I'm here to help whenever you need me. Click <b>Help me, Clippy!</b> or just ask me anything! 📎";
+      setAnimation('wave');
+      
+      // Start showing idle messages after a delay
+      setTimeout(() => { isUserInteracting = false; }, 15000);
+    }, 300);
+  </script>
+</body>
+</html>
