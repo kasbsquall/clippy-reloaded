@@ -159,10 +159,21 @@ npm test -- --coverage  # With coverage
 
 ## 🔧 Configuration
 
-Create a `.env` file:
+Create a `.env` file in the project root:
+
+```env
+OPENAI_API_KEY=sk-your-api-key-here
 ```
-OPENAI_API_KEY=your_api_key_here
-```
+
+### Getting an OpenAI API Key
+
+1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Sign up or log in
+3. Click "Create new secret key"
+4. Copy the key (starts with `sk-`)
+5. Paste it in your `.env` file
+
+**Note:** Clippy uses `gpt-4o-mini` model which is fast and affordable (~$0.15 per 1M input tokens)
 
 ---
 

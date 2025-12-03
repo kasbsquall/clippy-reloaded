@@ -76,8 +76,8 @@ export class AIEngine {
       const userMessage = this.buildUserMessage(context, frustration);
       
       const response = await this.client.chat.completions.create({
-        model: 'gpt-5-mini',
-        max_completion_tokens: 150,
+        model: 'gpt-4o-mini',
+        max_tokens: 150,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userMessage }
@@ -117,11 +117,11 @@ export class AIEngine {
         ...this.chatHistory
       ];
 
-      console.log('[AI] Sending request to GPT-5 mini...');
+      console.log('[AI] Sending request to GPT-4o-mini...');
       
       const response = await this.client.chat.completions.create({
-        model: 'gpt-5-mini',
-        max_completion_tokens: 500,
+        model: 'gpt-4o-mini',
+        max_tokens: 500,
         messages: messages,
       });
 
