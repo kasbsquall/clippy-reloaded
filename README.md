@@ -49,19 +49,36 @@ Built for **Kiroween 2025** demonstrating all Kiro features:
 
 ## 🚀 Quick Start
 
+### Prerequisites
+- **Node.js** 18+ ([download](https://nodejs.org/))
+- **OpenAI API Key** ([get one here](https://platform.openai.com/api-keys))
+- **Windows 10/11** (macOS/Linux support coming soon)
+
+### Installation
+
 ```bash
-# Install dependencies
+# 1. Clone the repository
+git clone https://github.com/YOUR_USERNAME/clippy-reloaded.git
+cd clippy-reloaded
+
+# 2. Install dependencies
 npm install
 
-# Create .env file with your OpenAI API key
+# 3. Create .env file with your OpenAI API key
 echo "OPENAI_API_KEY=your_key_here" > .env
+# Or manually create .env file and add: OPENAI_API_KEY=sk-...
 
-# Build the project
+# 4. Build the project
 npm run build
 
-# Start Clippy Reloaded
+# 5. Start Clippy Reloaded
 npm start
 ```
+
+### Troubleshooting
+- **"Cannot find module"** - Run `npm install` again
+- **"OPENAI_API_KEY not set"** - Make sure `.env` file exists with your key
+- **Window doesn't appear** - Check system tray (bottom right on Windows)
 
 ---
 
