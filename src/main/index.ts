@@ -91,12 +91,13 @@ function createWindow(): void {
 
 // Create system tray icon
 function createTray(): void {
-  // Create a 16x16 paperclip icon - purple/blue gradient style
-  // This is a proper ICO-compatible PNG with transparency
-  const iconDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGASURBVFhH7ZY9TsNAEIXfOqQgHIArcAzOQEfJMTgCJQUFBRISSJQUFBQUFBQUFBT8FAQSEuIAHIFjcAauwAEoiJ9hd+3YXq+dOBIFX7Hy7sy8nZ21vQYAIoJSCgCglIKIQCkFEYFSCiICAAghICKICCICEYFSCiICABBCQEQgIogIRARKKYgIAEAIARGBiCAiiAiUUhARAIAQAiICEUFEICJQSkFEAABCCIgIIoKIQESglIKIAACEEBARRAQigohAKQURAQAIISAiiAgiAhGBUgoiAgAQQkBEEBFEBCICpRREBADAGAMRgYggIhARKKUgIgAAYwxEBBFBRCAiUEpBRAAAxhiICCKCiEBEoJSCiAAAjDEQEUQEEYGIQCkFEQEAGGMgIogIIgIRgVIKIgIAMMZARBARRAQiAqUURASNMYiIICKICEQESqn/E0BEEBH+TwARQUT4PwFEBBHh/wQQEUSE/xNARBAR/k8AEUFEEBEAAP8BLwBVwFZhfbYAAAAASUVORK5CYII=';
+  // Load paperclip icon from assets folder
+  const iconPath = path.join(__dirname, '../assets/icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
   
-  const icon = nativeImage.createFromDataURL(iconDataUrl);
-  tray = new Tray(icon);
+  // Resize to 16x16 for system tray (Windows standard)
+  const resizedIcon = icon.resize({ width: 16, height: 16 });
+  tray = new Tray(resizedIcon);
   
   const contextMenu = Menu.buildFromTemplate([
     { 

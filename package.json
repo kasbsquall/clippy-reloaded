@@ -7,7 +7,7 @@
     "start": "electron .",
     "dev": "npm run build && electron .",
     "build": "tsc && npm run copy-assets",
-    "copy-assets": "node -e \"require('fs').cpSync('src/renderer', 'dist/renderer', {recursive: true})\"",
+    "copy-assets": "node -e \"require('fs').cpSync('src/renderer', 'dist/renderer', {recursive: true}); require('fs').cpSync('src/assets', 'dist/assets', {recursive: true})\"",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src --ext .ts,.tsx",
